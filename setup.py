@@ -12,7 +12,9 @@ setup(
     packages = ['ansible_test'],
     package_data = {
         "ansible_test": [
-            "resources/Dockerfile.j2",
+            "resources/Dockerfile.ubuntu.j2",
+            "resources/Dockerfile.centos.j2",
+            "resources/Dockerfile.alpine.j2",
             "resources/inventory.yml",
             "resources/playbook.yml"]
     },

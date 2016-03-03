@@ -1,21 +1,23 @@
 #!/usr/bin/env python
 
 import argparse
-import os
+import os, sys
 import subprocess
 from pkg_resources import resource_string
 
 from jinja2 import Template
 
 
-DOCKER_CONTAINER = "testbox"
+DOCKER_CONTAINER = "testbox-%s"
 ANSIBLE_TESTDIR = os.path.join(os.getcwd(), ".ansible-test")
 
+SUPPORTED_DISTROS = ["centos", "ubuntu", "alpine"]
 
 def generate_dockerfile(context):
     '''Returns the file path to the rendered Dockerfile'''
+
     rendered_dockerfile_contents = Template(
-        resource_string("ansible_test", "resources/Dockerfile.j2")
+        resource_string("ansible_test", "resources/Dockerfile.%s.j2" % context["distro"])
     ).render(context)
 
     rendered_dockerfile_path = os.path.join(os.getcwd(), "Dockerfile")
@@ -52,16 +54,20 @@ if __name__ == "__main__":
     args, extra_args = parser.parse_known_args()
 
     context = {
-       'image': args.image,
-       'extra_args': extra_args
+        'image': args.image,
+        'distro': args.image.split(':')[0],
+        'extra_args': extra_args
     }
+
+    if context["distro"] not in SUPPORTED_DISTROS:
+        sys.exit("This distro is not supported yet: %s" % context["distro"])
 
     main(context)
 
     # Build Docker Container
     subprocess.check_call(
         ['docker', 'build',
-         '-t', DOCKER_CONTAINER, '.']
+         '-t', DOCKER_CONTAINER % args.image, '.']
     )
 
     # Run Test Suite
@@ -69,5 +75,5 @@ if __name__ == "__main__":
         ['docker', 'run',
          '-e', 'DOCKER_TEST_ROLE=%s' % args.role,
          '--privileged=true',
-         '-it', DOCKER_CONTAINER]
+         '-it', DOCKER_CONTAINER % args.image]
     )
